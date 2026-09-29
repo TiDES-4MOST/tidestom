@@ -135,7 +135,8 @@ services:
       database:
         condition: service_started
       snid_api:
-        condition: service_started
+        condition: service_healthy
+        restart: true
     volumes:
       - static_volume:/app/staticfiles
       - snid_api_runs:/snid_api_runs
@@ -146,7 +147,7 @@ services:
           sleep 2
         done && \
         python manage.py makemigrations && \
-        python manage.py migrate && \ 
+        python manage.py migrate && \
         mkdir -p /app/static/config &&\
         cp /snid_api_runs/snid_template_options/subtypes.txt /app/static/config/ &&\
         python manage.py collectstatic --no-input \
@@ -170,6 +171,7 @@ services:
       - "8001:8000"
     environment:
       DJANGO_URL: http://web:8000
+      LOCAL_MODE: 'True'
     volumes:
       - snid_api_runs:/snid_api_runs
       - spectra:/data/spectra:ro
