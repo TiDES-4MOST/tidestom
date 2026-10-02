@@ -47,6 +47,7 @@ fetch("{% static 'json/line_data.json' %}")
 
         const commonContainer = document.getElementById("common-lines");
         const absorptionContainer = document.getElementById("absorption-lines");
+        const uvContainer = document.getElementById("uv-lines");
         const transientSpecificContainer = document.getElementById("transient-specific-lines");
 
         // Build checkboxes
@@ -59,6 +60,7 @@ fetch("{% static 'json/line_data.json' %}")
 
             if (type === "common") commonContainer.appendChild(wrapper);
             else if (type === "absorption") absorptionContainer.appendChild(wrapper);
+            else if (type === "uv-lines") uvContainer.appendChild(wrapper);
             else if (type === "transient-specific") transientSpecificContainer.appendChild(wrapper);
         });
 
@@ -1239,6 +1241,11 @@ function getCookie(name) {
           <div class="checkbox-group">
               <h5>Absorption Lines</h5>
               <div class="checkbox-grid" id="absorption-lines"></div>
+          </div>
+
+          <div class="checkbox-group">
+              <h5>UV Lines</h5>
+              <div class="checkbox-grid" id="uv-lines"></div>
           </div>
 
           <div class="checkbox-group">
