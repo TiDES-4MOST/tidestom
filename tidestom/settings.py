@@ -27,6 +27,10 @@ DB_NAME = os.environ.get('DB_NAME')
 LOCAL_MODE = os.environ.get('LOCAL_MODE')
 SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
 SLACK_CHANNEL_ID = os.environ.get('SLACK_CHANNEL_ID')
+SALT = os.environ.get('SALT')
+host_user = os.environ.get('HOST_USER')
+host_pwd = os.environ.get('HOST_PWD')
+MANAGER1 = os.environ.get('MANAGER1')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -189,15 +193,15 @@ else:
     LOGOUT_REDIRECT_URL = '/'
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
+    'django.contrib.auth.backends.AllowAllUsersModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
 
 TOM_REGISTRATION = {
     'REGISTRATION_AUTHENTICATION_BACKEND': 'django.contrib.auth.backends.\
-            ModelBackend',
+            AllowAllUsersModelBackend',
     'REGISTRATION_REDIRECT_PATTERN': 'home',
-    'REGISTRATION_STRATEGY': 'open',  # ['open', 'approval_required']
+    'REGISTRATION_STRATEGY': 'approval_required',  # ['open', 'approval_required']
     'SEND_APPROVAL_EMAILS': True,
     # Optional email if `REGISTRATION_STRATEGY = 'approval_required'`, default is False
     'APPROVAL_SUBJECT': f'Your {TOM_NAME} registration has been approved!',
@@ -446,4 +450,16 @@ USER_OUTPUT_BASES = {
         'snid_api': '/snid_api_runs/workspaces',
         'ngsf_api': '/ngsf_api_runs/workspaces',
         }
-USER_HASH_SALT = 'my_special_salt' #Update for deployment
+USER_HASH_SALT = SALT #Update for deployment
+
+
+MANAGERS = [('Manager1', f'{MANAGER1}')]  # List of managers who should receive registration emails
+EMAIL_SUBJECT_PREFIX = f'[{TOM_NAME}]'  # Optional prefix for all approval requests to managers
+EMAIL_HOST = 'smtp.gmail.com'   # SMTP server for sending emails (this example is for gmail)
+EMAIL_PORT = 587  # Port for the SMTP server
+EMAIL_HOST_USER = host_user  # Email address for the account sending emails
+EMAIL_HOST_PASSWORD = host_pwd  # Password for the account sending emails (app password for gmail)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_USE_TLS = True  # this is needed for gmail, other services may vary
+EMAIL_USE_SSL = False  # this is needed for gmail, other services may vary
+SERVER_EMAIL = host_user  # Email address used as the "from" address if EMAIL_HOST_USER is not needed
