@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir tomtoolkit==2.26.2
 
 RUN pip install --no-cache-dir -r requirements.txt
+RUN git clone -b 1.0.5-slack https://github.com/cjduffy/tom_registration.git && cd tom_registration && pip install .
 
 COPY . .
 
