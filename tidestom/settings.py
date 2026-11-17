@@ -25,6 +25,7 @@ DB_HOST = os.environ.get('DB_HOST')
 DB_PORT = os.environ.get('DB_PORT')
 DB_NAME = os.environ.get('DB_NAME')
 LOCAL_MODE = os.environ.get('LOCAL_MODE')
+DEV_MODE = os.environ.get('DEV_MODE')
 SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
 SLACK_CHANNEL_ID = os.environ.get('SLACK_CHANNEL_ID')
 
@@ -44,12 +45,13 @@ USE_X_FORWARDED_HOST = True
 
 CSRF_TRUSTED_ORIGINS = [
         "http://localhost:8080",
-        'http://tides.lsst.ac.uk',
+        'https://tides.lsst.ac.uk',
         'http://192.41.122.49',
         'http://192.41.112.149',
         ]
 #Activate on HTTPS
-#SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+if not DEV_MODE:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 
@@ -203,7 +205,7 @@ TOM_REGISTRATION = {
     'APPROVAL_SUBJECT': f'Your {TOM_NAME} registration has been approved!',
     # Optional subject line of approval email, (Default Shown)
     'APPROVAL_MESSAGE': f'Your {TOM_NAME} registration has been approved. \
-            You can log in <a href="mytom.com/login">here</a>.'
+            You can log in <a href="tides.lsst.ac.uk/marshal/accounts/login">here</a>.'
             # Optional html-enabled body for approval email, (Default Shown)
 }
 
