@@ -31,6 +31,12 @@ SLACK_CHANNEL_ID = os.environ.get('SLACK_CHANNEL_ID')
 SLACK_ADMIN_BOT = os.environ.get('SLACK_ADMIN_BOT')
 SLACK_ADMIN_CHANNEL = os.environ.get('SLACK_ADMIN_CHANNEL')
 SALT = os.environ.get('SALT')
+TIDESRM_DOWNLOAD_ROOT = os.environ.get('TIDESRM_DOWNLOAD_ROOT', '/data/tidesrm')
+# Comma-separated SHA-256 hashes of independently provisioned bearer tokens.
+TIDESRM_TOKEN_SHA256 = tuple(
+    token.strip().lower() for token in os.environ.get('TIDESRM_TOKEN_SHA256', '').split(',')
+    if token.strip()
+)
 host_user = os.environ.get('HOST_USER')
 host_pwd = os.environ.get('HOST_PWD')
 MANAGER1 = os.environ.get('MANAGER1')
