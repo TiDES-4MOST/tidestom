@@ -59,6 +59,12 @@ services:
       - /mnt/api_results/snid_api_runs:/snid_api_runs
       - /mnt/api_results/ngsf_api_runs:/ngsf_api_runs
       - /mnt/data/spectra:/data/spectra:ro
+      - type: bind
+        source: /mnt/data/tidesrm
+        target: /data/tidesrm
+        read_only: true
+        bind:
+          create_host_path: false
     environment:
       TIDES_TEST_DIR: '/app/spectra/test_data/'
       DB_PASS: ${DB_PASS}
@@ -77,6 +83,7 @@ services:
       HOST_USER: ${HOST_USER}
       HOST_PWD: ${HOST_PWD}
       MANAGER1: ${MANAGER1}
+      TIDESRM_TOKEN_SHA256: ${TIDESRM_TOKEN_SHA256:-}
 
       # Django settings
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"
