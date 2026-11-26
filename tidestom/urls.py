@@ -80,25 +80,29 @@ urlpatterns = [
         name='delete_target'
     ),
     path(
-        '', include('tom_common.urls')
+        '', 
+        include('tom_common.urls')
     ),
     path(
         'api/classifications/',
          custom_extras.classification_data,
          name='classification_data'
     ),
-    path('api/redshift-plot/',
-         custom_extras.redshift_plot_data,
-         name='redshift_plot_data'
-    ),
     path('api/classification-timeline/', 
          custom_extras.classification_timeline_data, 
          name='classification_timeline_data'
     ),
+    path('api/redshift-plot/',
+         custom_extras.redshift_plot_data,
+         name='redshift_plot_data'
+    ),
     path(
-        "snid/run/", 
-        SnidFormAjaxView.as_view(), 
-        name="snid-run"
+        'api/average-spectrum/<str:sn_type>/', 
+        custom_extras.average_spectrum_by_type, 
+        name='average_spectrum_by_type'
+    ),
+    path(
+        "snid/run/", SnidFormAjaxView.as_view(), name="snid-run"
     ),
     path(
         "ngsf/run/", 
@@ -109,7 +113,7 @@ urlpatterns = [
         "target_spectroscopy/<int:target_id>/", 
         target_spectroscopy_partial,
         name="target_spectroscopy"
-        ),
+    ),
     path(
         "download_spectrum/<int:target_id>/", 
         download_spectrum_ascii,
@@ -155,7 +159,6 @@ urlpatterns = [
         PublicClassificationsDownloadView.as_view(),
         name='public_classifications_download',
     ),
-
     path(
         "send-to-slack/",
         send_to_slack,

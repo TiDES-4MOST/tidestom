@@ -11,26 +11,19 @@
     <h3 class="text-center">The industralisation of transient spectroscopy.</h3>
 
     <!-- END MODIFIED CONTENT -->
-   
-    
   </div>
+
   <div class="col-md-4">
-    <div class="card">
-      <div class="card-header">
-        Latest Comments
-      </div>
-      {% recent_comments %}
-    </div>
-    <br/>
     <div class="card">
       <div class="card-header">
         Latest Targets
       </div>
       {% recent_targets %}
   </div>
+
 </div>
 
-<div style="display:flex; flex-direction: row; gap: 60px;">
+<div style="display:flex; flex-direction: row; gap: 45px;">
 <!-- pie chart -->
   <div>
     <h5>Supernova Classifications</h5>
@@ -42,8 +35,56 @@
     <h5> Classification Timeline </h5>
     <div id="timeline" style="width: 400px; height: 400px;"></div>
   </div>
+
+
+<!-- redshift plot -->
+  <div>
+    <h5> Redshift by Classification </h5>
+    <div id="redshiftplot" style="width: 400px; height: 400px;"></div>
+  </div>
 </div>
 
+<body>
+  
+  <h5> Supernova Classifications </h5>
+  <div id="supernovapiechart" style="width: 400px; height: 400px;"></div>
+
+
+  <script src="https://cdn.plot.ly/plotly-3.6.0.min.js"></script> <!-- 3.6.0 is the latest version of plotly.js as of June 2026 -->
+  <script>
+    const COLOURS = [
+        '#B912D1', '#0542D1', '#17A008', '#638604', '#735401', '#6A1F00', '#3C0000'
+        ];
+
+    async function renderChart() {
+      const response = await fetch('{% url "classification_data" %}');
+      const data = await response.json();
+
+      const chartData = [{
+        type: 'pie',
+        labels: data.labels,
+        values: data.counts,
+        marker: {
+          colors: COLOURS.slice(0, data.labels.length)
+        },
+        textinfo: 'label+percent'
+      }];
+
+      const layout = {
+        title: 'Supernova Classifications',
+        height: 400,
+        width: 400
+      };
+
+      Plotly.newPlot('supernovapiechart', chartData, layout);
+    }
+
+    renderChart();
+  </script>
+
+  {% average_spectrum_data %}
+
+</body>
 <script src="https://cdn.plot.ly/plotly-3.6.0.min.js"></script> <!-- 3.6.0 is the latest version of plotly.js as of June 2026 -->
 <script>
   const COLOURS = [
@@ -84,40 +125,6 @@
       cumulative_counts.push(cumulative_sum);
     }
 
-    renderChart();
-  </script>
-
-  <div id="redshiftplot" style="width: 400px; height: 400px;"></div>
-
-  <script src="https://cdn.plot.ly/plotly-3.6.0.min.js"></script><!-- 3.6.0 is the latest version of plotly.js as of June 2026 -->
-  <script>
-      async function renderRedshiftPlot() {
-        const response = await fetch('{% url "redshift_plot_data" %}');
-        const data = await response.json();
-
-        const zplotData = [{
-            type: 'scatter',
-            mode: 'markers',
-            x: data.sn_types,
-            y: data.redshifts,
-            marker: { color: '#0542D1' }
-        }];
-
-        Plotly.newPlot('redshiftplot', zplotData, {
-            title: 'Redshift by Classification',
-            xaxis: { title: { text: 'Classification' } },
-            yaxis: { title: { text: 'Redshift' } },
-            height: 400,
-            width: 400
-        });
-    }
-
-    renderRedshiftPlot();
-
-  </script>
-
-</body>
-
     const timelineData = [{
       type: 'scatter',
       mode: 'lines+markers',
@@ -125,7 +132,7 @@
       y: cumulative_counts,
       line: { 
         shape: 'linear',
-        colour: '#0542D1'
+        color: '#0542D1'
       },
       marker: { 
         color: '#0542D1' 
@@ -143,8 +150,46 @@
       );
   }
 
+  async function renderRedshiftPlot() {
+    const response = await fetch('{% url "redshift_plot_data" %}');
+    const data = await response.json();
+    const types = [...new Set(data.sn_types)]; // Get unique types
+    const colourmap = {};
+    types.forEach((type, index) => {
+      colourmap[type] = COLOURS[index % COLOURS.length];
+    });
+
+    const markerColors = data.sn_types.map(type => colourmap[type]);
+
+
+    const redshiftplotData = [{
+      type: 'scatter',
+      mode: 'markers',
+      x: data.sn_types,
+      y: data.redshifts,
+      marker: { 
+        color: markerColors 
+      }
+    }];
+
+    Plotly.newPlot('redshiftplot', redshiftplotData, {
+      title: 'Redshift by Classification',
+      xaxis: { title: { text: 'Classification' } },
+      yaxis: { title: { text: 'Redshift' } },
+      height: 400,
+      width: 400}
+      );
+  }
+
   renderPieChart();
   renderTimeline();
+  renderRedshiftPlot();
+
+
+
 </script>
+
+{% average_spectrum_data %}
+
 
 {% endblock %}
