@@ -140,7 +140,6 @@ services:
           echo 'Waiting for DB...'
           sleep 2
         done && \
-        python manage.py makemigrations && \
         python manage.py migrate && \ 
         python manage.py collectstatic --no-input \
       "
