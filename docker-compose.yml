@@ -65,6 +65,12 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      - type: bind
+        source: /mnt/data/4slsls
+        target: /data/4slsls
+        read_only: true
+        bind:
+          create_host_path: false
     environment:
       TIDES_TEST_DIR: '/app/spectra/test_data/'
       DB_PASS: ${DB_PASS}
@@ -84,6 +90,7 @@ services:
       HOST_PWD: ${HOST_PWD}
       MANAGER1: ${MANAGER1}
       TIDESRM_TOKEN_SHA256: ${TIDESRM_TOKEN_SHA256:-}
+      FOURSLSLS_TOKEN_SHA256: ${FOURSLSLS_TOKEN_SHA256:-}
 
       # Django settings
       DJANGO_SECRET_KEY: "u-a)en=plsciz3d4(2*yc()4(1=#@o)bkdusqho3kx%)i&amp;0cy"

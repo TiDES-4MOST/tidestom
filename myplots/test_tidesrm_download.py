@@ -7,7 +7,7 @@ from pathlib import Path
 from django.test import RequestFactory, SimpleTestCase, override_settings
 from django.urls import resolve
 
-from myplots.tidesrm_download import download_tidesrm_by_date
+from myplots.tidesrm_download import download_4slsls_by_date, download_tidesrm_by_date
 
 
 TOKEN = "test-token"
@@ -31,7 +31,7 @@ class TestTidesRMDownload(SimpleTestCase):
         request = getattr(self.factory, method)(f"/api/tidesrm/download/{date}/{query}", **headers)
         return download_tidesrm_by_date(request, date)
 
-    def put_file(self, name="20260202_LJ11_20260209_S1003.fits", *, env="operations", data=b"FITS"):
+    def put_file(self, name="20260202_LJ11_20260209_QTR_S1003.fits", *, env="operations", data=b"FITS"):
         directory = self.root / env / "20260202"
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / name
@@ -80,8 +80,8 @@ class TestTidesRMDownload(SimpleTestCase):
 
     def test_multiple_matches_return_zip_without_unrelated_files(self):
         first = self.put_file(data=b"first")
-        second = self.put_file("20260202_LJ11_20260210_S1003.fits", data=b"second")
-        self.put_file("20260202_LJ11_20260210_S1004.fits", data=b"other")
+        second = self.put_file("20260202_LJ11_20260210_QTR_S1003.fits", data=b"second")
+        self.put_file("20260202_LJ11_20260210_QTR_S1004.fits", data=b"other")
         response = self.request()
         self.assertEqual(response["Content-Type"], "application/zip")
         self.assertIn("tidesrm_operations_20260202.zip", response["Content-Disposition"])
@@ -117,8 +117,79 @@ class TestTidesRMDownload(SimpleTestCase):
     def test_symlinked_date_directory_is_not_used(self):
         real_dir = self.root / "real"
         real_dir.mkdir()
-        (real_dir / "20260202_LJ11_20260209_S1003.fits").write_bytes(b"secret")
+        (real_dir / "20260202_LJ11_20260209_QTR_S1003.fits").write_bytes(b"secret")
         env_dir = self.root / "operations"
         env_dir.mkdir()
         (env_dir / "20260202").symlink_to(real_dir, target_is_directory=True)
         self.assertEqual(self.request().status_code, 404)
+
+
+class Test4SLSLSDownload(TestTidesRMDownload):
+    def setUp(self):
+        super().setUp()
+        self.tidesrm_root = self.root
+        self.root = self.root / "4slsls"
+        self.root.mkdir()
+        self.fourslsls_token = "4slsls-test-token"
+        self.fourslsls_hash = hashlib.sha256(self.fourslsls_token.encode()).hexdigest()
+        override = override_settings(
+            FOURSLSLS_DOWNLOAD_ROOT=str(self.root), FOURSLSLS_TOKEN_SHA256=(self.fourslsls_hash,)
+        )
+        override.enable()
+        self.addCleanup(override.disable)
+
+    def request(self, date="20260202", *, token="4slsls-test-token", query="", method="get"):
+        headers = {} if token is None else {"HTTP_AUTHORIZATION": f"Bearer {token}"}
+        request = getattr(self.factory, method)(f"/api/4slsls/download/{date}/{query}", **headers)
+        return download_4slsls_by_date(request, date)
+
+    def put_file(self, name="20260202_LJ11_20260209_QTR_S1004.fits", *, env="operations", data=b"FITS"):
+        return super().put_file(name, env=env, data=data)
+
+    def test_url_resolves(self):
+        match = resolve("/api/4slsls/download/20260202/")
+        self.assertEqual(match.url_name, "download_4slsls_by_date")
+
+    @override_settings(FOURSLSLS_TOKEN_SHA256=())
+    def test_no_tokens_fails_closed(self):
+        self.assertEqual(self.request().status_code, 503)
+
+    @override_settings(FOURSLSLS_TOKEN_SHA256=("not-a-digest",))
+    def test_invalid_token_configuration_fails_closed(self):
+        self.assertEqual(self.request().status_code, 503)
+
+    def test_multiple_tokens_can_be_revoked_independently(self):
+        second = hashlib.sha256(b"second-token").hexdigest()
+        self.put_file()
+        with override_settings(FOURSLSLS_TOKEN_SHA256=(self.fourslsls_hash, second)):
+            self.assertEqual(self.read_response(self.request(token="second-token")), b"FITS")
+        self.assertEqual(self.request(token="second-token").status_code, 401)
+
+    def test_missing_storage_returns_503(self):
+        with override_settings(FOURSLSLS_DOWNLOAD_ROOT=str(self.root / "missing")):
+            self.assertEqual(self.request().status_code, 503)
+
+    def test_multiple_matches_return_zip_without_unrelated_files(self):
+        first = self.put_file(data=b"first")
+        second = self.put_file("20260202_LJ11_20260210_QTR_S1004.fits", data=b"second")
+        self.put_file("20260202_LJ11_20260210_QTR_S1003.fits", data=b"other")
+        response = self.request()
+        self.assertEqual(response["Content-Type"], "application/zip")
+        self.assertIn("4slsls_operations_20260202.zip", response["Content-Disposition"])
+        with zipfile.ZipFile(io.BytesIO(self.read_response(response))) as archive:
+            self.assertEqual(archive.namelist(), [first.name, second.name])
+            self.assertEqual(archive.read(first.name), b"first")
+            self.assertEqual(archive.read(second.name), b"second")
+
+    def test_survey_tokens_are_not_interchangeable(self):
+        self.put_file()
+        self.assertEqual(self.request(token=TOKEN).status_code, 401)
+        request = self.factory.get(
+            "/api/tidesrm/download/20260202/", HTTP_AUTHORIZATION=f"Bearer {self.fourslsls_token}"
+        )
+        self.assertEqual(download_tidesrm_by_date(request, "20260202").status_code, 401)
+
+    def test_unconfigured_survey_does_not_disable_other(self):
+        self.put_file()
+        with override_settings(TIDESRM_TOKEN_SHA256=()):
+            self.assertEqual(self.read_response(self.request()), b"FITS")

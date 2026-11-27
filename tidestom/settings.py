@@ -37,6 +37,11 @@ TIDESRM_TOKEN_SHA256 = tuple(
     token.strip().lower() for token in os.environ.get('TIDESRM_TOKEN_SHA256', '').split(',')
     if token.strip()
 )
+FOURSLSLS_DOWNLOAD_ROOT = os.environ.get('FOURSLSLS_DOWNLOAD_ROOT', '/data/4slsls')
+FOURSLSLS_TOKEN_SHA256 = tuple(
+    token.strip().lower() for token in os.environ.get('FOURSLSLS_TOKEN_SHA256', '').split(',')
+    if token.strip()
+)
 host_user = os.environ.get('HOST_USER')
 host_pwd = os.environ.get('HOST_PWD')
 MANAGER1 = os.environ.get('MANAGER1')
