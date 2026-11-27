@@ -42,7 +42,7 @@ from myplots.views import (
     download_spectrum_ascii,
     download_spectrum_by_specid
 )
-from myplots.tidesrm_download import download_tidesrm_by_date
+from myplots.tidesrm_download import download_4slsls_by_date, download_tidesrm_by_date
 
 urlpatterns = [
     path(
@@ -129,6 +129,11 @@ urlpatterns = [
         "api/tidesrm/download/<str:obsdate>/",
         download_tidesrm_by_date,
         name="download_tidesrm_by_date",
+    ),
+    path(
+        "api/4slsls/download/<str:obsdate>/",
+        download_4slsls_by_date,
+        name="download_4slsls_by_date",
     ),
     path(
         "api/previous_snid_runs/", #

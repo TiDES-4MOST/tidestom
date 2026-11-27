@@ -1,4 +1,4 @@
-"""Download TiDES-RM products using tokens independent of TOM accounts."""
+"""Download survey products using tokens independent of TOM accounts."""
 
 import hashlib
 import hmac
@@ -19,13 +19,13 @@ from django.views.decorators.http import require_GET
 logger = logging.getLogger(__name__)
 
 
-def _authorized(request):
+def _authorized(request, token_hashes):
     scheme, separator, token = request.headers.get("Authorization", "").partition(" ")
     if scheme.lower() != "bearer" or not separator or not token or not token.isascii():
         return False
     digest = hashlib.sha256(token.encode("ascii")).hexdigest()
     # Evaluate every comparison, rather than returning on the first match.
-    matches = [hmac.compare_digest(digest, configured) for configured in settings.TIDESRM_TOKEN_SHA256]
+    matches = [hmac.compare_digest(digest, configured) for configured in token_hashes]
     return any(matches)
 
 
@@ -33,13 +33,30 @@ def _authorized(request):
 @require_GET
 def download_tidesrm_by_date(request, obsdate):
     """Return the matching original FITS file, or a ZIP if several match."""
-    if not settings.TIDESRM_TOKEN_SHA256 or not all(
-        re.fullmatch(r"[0-9a-f]{64}", digest) for digest in settings.TIDESRM_TOKEN_SHA256
+    return _download_by_date(
+        request, obsdate, settings.TIDESRM_TOKEN_SHA256, settings.TIDESRM_DOWNLOAD_ROOT,
+        survey_id="S1003", label="tidesrm", realm="TiDES-RM downloads",
+    )
+
+
+@never_cache
+@require_GET
+def download_4slsls_by_date(request, obsdate):
+    """Return the 4SLSLS FITS file or ZIP for an observing date."""
+    return _download_by_date(
+        request, obsdate, settings.FOURSLSLS_TOKEN_SHA256, settings.FOURSLSLS_DOWNLOAD_ROOT,
+        survey_id="S1004", label="4slsls", realm="4SLSLS downloads",
+    )
+
+
+def _download_by_date(request, obsdate, token_hashes, download_root, *, survey_id, label, realm):
+    if not token_hashes or not all(
+        re.fullmatch(r"[0-9a-f]{64}", digest) for digest in token_hashes
     ):
         return HttpResponse("Download service not configured.", status=503, content_type="text/plain")
-    if not _authorized(request):
+    if not _authorized(request, token_hashes):
         response = HttpResponse("Invalid or missing token.", status=401, content_type="text/plain")
-        response["WWW-Authenticate"] = 'Bearer realm="TiDES-RM downloads"'
+        response["WWW-Authenticate"] = f'Bearer realm="{realm}"'
         return response
 
     if not re.fullmatch(r"[0-9]{8}", obsdate):
@@ -53,7 +70,7 @@ def download_tidesrm_by_date(request, obsdate):
     if process_env not in ("operations", "reproc"):
         return HttpResponse("Invalid process environment.", status=400, content_type="text/plain")
 
-    root = Path(settings.TIDESRM_DOWNLOAD_ROOT)
+    root = Path(download_root)
     env_dir = root / process_env
     date_dir = env_dir / obsdate
     try:
@@ -65,7 +82,7 @@ def download_tidesrm_by_date(request, obsdate):
         if not date_dir.is_dir():
             return HttpResponse("No files found.", status=404, content_type="text/plain")
 
-        pattern = re.compile(rf"{obsdate}_LJ11_[0-9]{{8}}_S1003\.fits\Z")
+        pattern = re.compile(rf"{obsdate}_LJ11_[0-9]{{8}}_QTR_{re.escape(survey_id)}\.fits\Z")
         files = sorted(
             path for path in date_dir.iterdir()
             if pattern.fullmatch(path.name) and not path.is_symlink() and path.is_file()
@@ -85,14 +102,14 @@ def download_tidesrm_by_date(request, obsdate):
                 archive.seek(0)
                 response = FileResponse(
                     archive, as_attachment=True,
-                    filename=f"tidesrm_{process_env}_{obsdate}.zip",
+                    filename=f"{label}_{process_env}_{obsdate}.zip",
                     content_type="application/zip",
                 )
             except Exception:
                 archive.close()
                 raise
     except OSError:
-        logger.exception("Unable to read TiDES-RM download for date %s", obsdate)
+        logger.exception("Unable to read %s download for date %s", label, obsdate)
         return HttpResponse("Download storage unavailable.", status=503, content_type="text/plain")
 
     response["X-Content-Type-Options"] = "nosniff"
